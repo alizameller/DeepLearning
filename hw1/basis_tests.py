@@ -1,7 +1,6 @@
 # /bin/env python3.8
 
 import pytest
-import numpy as np
 
 
 def test_nonlinearity_additivity():
