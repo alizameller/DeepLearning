@@ -9,7 +9,7 @@ import math
 # import sys module
 import sys
 sys.path.insert(0,"..")
-from hw1.hw1 import Linear, grad_update
+from hw1 import Linear, grad_update
 
 class MLP(Linear, tf.Module):
     def __init__(self, num_inputs, num_outputs, 
@@ -31,16 +31,7 @@ class MLP(Linear, tf.Module):
         
         p = self.output_linear(p) 
         return self.output_activation(p) # perform sigmoid to ensure good values
-'''
-def twospirals(n_points, noise=.9):
-    rng = np.random.default_rng()
-    n = np.sqrt(rng.random(size = (n_points,1))) * (2*np.pi) * 2.25 # range = -2*pi*2.25, 2*pi*2.25
-    d1x = -np.cos(n)*n + rng.random(size = (n_points,1)) * noise
-    d1y = np.sin(n)*n + rng.random(size = (n_points,1)) * noise
-    # creates (x, y) pairs where the set of (d1x, d1y) is class 1 and the set of (-d1x, -d1y) is class 2
-    return (np.vstack((np.hstack((d1x,d1y)),np.hstack((-d1x,-d1y)))), 
-            np.hstack((np.zeros(n_points, dtype = np.float32),np.ones(n_points, dtype = np.float32))))
-'''
+
 def twospirals(rng = np.random.default_rng(), stddev=0.1, num_samples=100 ):
     theta_a = rng.uniform(low = math.pi, high = 4*math.pi, size = (num_samples,))
     theta_b = rng.uniform(low = 2*math.pi, high = 5*math.pi, size = (num_samples,))
@@ -102,7 +93,7 @@ if __name__ == "__main__":
             x_batch = tf.transpose(tf.gather(data, batch_indices, axis = 1))
             y_batch = tf.transpose(tf.gather(classes, batch_indices, axis = 1))
             y_hat = mlp(x_batch)
-            loss = tf.math.reduce_mean(-y_batch * tf.math.log(y_hat + 1e-9) - (1 - y_batch) * tf.math.log(1 - y_hat + 1e-9))
+            loss = tf.math.reduce_mean(-y_batch * tf.math.log(y_hat) - (1 - y_batch) * tf.math.log(1 - y_hat))
 
         grads = tape.gradient(
             loss, mlp.trainable_variables, 
