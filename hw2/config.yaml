@@ -1,0 +1,11 @@
+learning:
+  step_size: 0.5
+  batch_size: 128
+  num_iters: 4000
+  decay_rate: 0.999
+data:
+  num_samples: 500
+  noise_stddev: 0.4
+  m: 8
+display:
+  refresh_rate: 10
