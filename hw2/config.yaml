@@ -3,8 +3,9 @@ learning:
   batch_size: 128
   num_iters: 4000
   decay_rate: 0.999
+  lambda_param: 0.1
+  batch_size: 100
 data:
-  num_samples: 500
   noise_stddev: 0.4
   m: 8
 display:
