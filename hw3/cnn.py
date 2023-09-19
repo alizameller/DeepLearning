@@ -62,6 +62,28 @@ class Classifier(tf.Module):
     def __call__(self, x): 
         return conv_net(x, self.weights)
 
+class Adam():
+    def __init__(self, trainable_vars, alpha = 0.001, beta_1 = 0.9, beta_2 = 0.999, eps = 1e-8):
+        self.m_list = [tf.zeros(shape = tf.shape(variable).numpy()) for variable in trainable_vars]
+        self.v_list = [tf.zeros(shape = tf.shape(variable).numpy()) for variable in trainable_vars]
+        self.alpha = alpha
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        self.eps = eps
+    def __call__(self, t, grads, vars):
+        new_m_list = []
+        new_v_list = []
+        for m, v, var, grad in zip(self.m_list, self.v_list, vars, grads):
+            m = self.beta_1 * m + (1 - self.beta_1) * grad
+            v = self.beta_2 * v + (1 - self.beta_2) * (grad**2)
+            new_m_list.append(m)
+            new_v_list.append(v)
+            m_hat = m/(1 - self.beta_1**t)
+            v_hat = v/(1 - self.beta_2**t)
+            var.assign_sub((self.alpha * m_hat)/((v_hat**0.5) + self.eps))
+        self.m_list = new_m_list
+        self.v_list = new_v_list
+
 if __name__ == "__main__":
     import argparse
     from pathlib import Path
@@ -104,7 +126,6 @@ if __name__ == "__main__":
     lambda_param = 0.1
     refresh_rate = 10
 
-    # n_input = 28 # 28 x 28 images
     n_classes = 10 # 10 digits [0, 9]
     layer_depths = [32, 64, 128]
     layer_kernel_sizes = [(3, 3), (3, 3), (3, 3)]
@@ -113,6 +134,7 @@ if __name__ == "__main__":
     bar = trange(num_iters)
 
     classifier = Classifier(input_depth, layer_depths, layer_kernel_sizes, n_classes)
+    adam = Adam(classifier.trainable_variables)
 
     for i in bar:
         batch_indices = rng.uniform(
@@ -123,45 +145,37 @@ if __name__ == "__main__":
             input_batch = tf.cast(tf.gather(train_images, batch_indices), tf.float32)
             label_batch = tf.gather(train_labels, batch_indices)
             label_hat = classifier(input_batch)
+            
+            sum = 0
+            for label, pred in zip(label_batch, tf.math.argmax(label_hat, axis=1)):
+                if (label.numpy() == pred.numpy()):
+                    sum += 1
+            accuracy = sum/len(label_batch)
+
             '''
             l2 = lambda_param * tf.norm(
-                tf.concat(
-                    [
-                        tf.reshape(variable, -1)
-                        for variable in classifier.trainable_variables
-                        if "w:0" in variable.name
-                    ],
-                    0,
-                )
+                tf.concat([tf.reshape(variable, -1) for variable in classifier.trainable_variables if "w:0" in variable.name], 0,)
             )
             '''
-            loss = (tf.math.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batch, logits=label_hat)))
+            loss = (tf.math.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batch, logits=label_hat))) 
 
         grads = tape.gradient(
             loss,
             classifier.trainable_variables,
         )
 
-        opt = tf.keras.optimizers.Adam(learning_rate=0.01)
-        opt.apply_gradients(zip(grads, classifier.trainable_variables))
-        
+        adam(i + 1, grads, classifier.trainable_variables)
+
         step_size *= decay_rate
 
         if i % refresh_rate == (refresh_rate - 1):
             bar.set_description(
-                f"Step {i}; Loss => {loss.numpy():0.4f}, step_size => {step_size:0.4f}"
+                f"Step {i}; Loss => {loss.numpy():0.4f}, step_size => {step_size:0.4f}, "
+                f"Accuracy is " + str(accuracy*100) + "%"
             )
             bar.refresh() 
         
     validation_set_data = train_images[(tf.shape(train_images)[0] - validation_size):]
     validation_set_labels = train_labels[(tf.shape(train_images)[0] - validation_size):]
     validation_labels_hat = classifier(tf.cast(validation_set_data, tf.float32))
-    print(validation_labels_hat)
     validation_labels_hat = tf.math.argmax(validation_labels_hat, axis=1)
-
-    sum = 0
-    for label, pred in zip(label_batch, tf.math.argmax(label_hat, axis=1)):
-        if (label.numpy() == pred.numpy()):
-            sum += 1
-    accuracy = sum/len(label_batch)
-    print("Accuracy is " + str(accuracy*100) + "%")
