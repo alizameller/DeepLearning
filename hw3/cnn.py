@@ -19,19 +19,25 @@ def conv2d(x, W, strides=1):
 def maxpool2d(x, k=2):
     return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1],padding='SAME')
 
+def dropout2d(x, rate = 0.1, seed = 4567897):
+    return tf.nn.dropout(x, rate, seed = seed)
+
 def conv_net(x, weights):  
     #print(tf.shape(x))
     conv1 = conv2d(x, weights['wc1'])
     #print(tf.shape(conv1))
     conv1 = maxpool2d(conv1, k=2)
     #print(tf.shape(conv1))
+    conv1 = dropout2d(conv1)
     conv2 = conv2d(conv1, weights['wc2'])
     #print(tf.shape(conv2))
     conv2 = maxpool2d(conv2, k=2)
+    conv2 = dropout2d(conv2)
     #print(tf.shape(conv2))
     conv3 = conv2d(conv2, weights['wc3'])
     #print(tf.shape(conv3))
     conv3 = maxpool2d(conv3, k=2)
+    conv3 = dropout2d(conv3)
     #print(tf.shape(conv3))
     fc1 = tf.reshape(conv3, [-1, 128*4*4])
     #print(tf.shape(fc1))
@@ -58,7 +64,6 @@ class Classifier(tf.Module):
         'out': tf.Variable(tf.random.normal(shape = (128, self.num_classes), stddev = 0.1)),
         }
 
-        #self.output_linear = Linear(num_inputs, num_outputs)
     def __call__(self, x): 
         return conv_net(x, self.weights)
 
@@ -103,7 +108,7 @@ if __name__ == "__main__":
     #     plt.subplot(330 + 1 + i)
     #     plt.imshow(test_images[i], cmap=plt.get_cmap('gray'))
     # plt.show()
-    
+
     # parser = argparse.ArgumentParser(
     #     prog="CNN",
     #     description="N/A",
@@ -152,12 +157,12 @@ if __name__ == "__main__":
                     sum += 1
             accuracy = sum/len(label_batch)
 
-            '''
+            
             l2 = lambda_param * tf.norm(
-                tf.concat([tf.reshape(variable, -1) for variable in classifier.trainable_variables if "w:0" in variable.name], 0,)
+                tf.concat([tf.reshape(variable, -1) for variable in classifier.trainable_variables], 0,)
             )
-            '''
-            loss = (tf.math.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batch, logits=label_hat))) 
+
+            loss = (tf.math.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batch, logits=label_hat))) + l2
 
         grads = tape.gradient(
             loss,
