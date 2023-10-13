@@ -216,7 +216,7 @@ class Adam:
         self.m_list = new_m_list
         self.v_list = new_v_list
 
-def loadData(files, images, labels):
+def loadData(files, images, labels, directory):
     for filename in files:
         # for some reason, there is a list variable in here, so skip over that
         if isinstance(filename, list):
@@ -269,7 +269,7 @@ if __name__ == "__main__":
     images = []
     labels = []
     files = [i for i in os.listdir(directory) if os.path.isfile(os.path.join(directory,i)) and 'data_batch' in i]
-    images, labels = loadData(files, images, labels)
+    images, labels = loadData(files, images, labels, directory)
 
     meta_file = r'./cifar-10-batches-py/batches.meta'
     meta_data = unpickle(meta_file)
