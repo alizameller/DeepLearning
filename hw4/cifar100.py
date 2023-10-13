@@ -35,10 +35,7 @@ def groupnorm(x, gamma, G, beta, eps = 1e-5):
 
 class Linear(tf.Module):
     def __init__(self, num_inputs, num_outputs, bias=True):
-        rng = tf.random.get_global_generator()
-
-        stddev = tf.math.sqrt(2 / (num_inputs + num_outputs))
-
+        
         self.w = tf.Variable(
             tf.zeros(shape=[num_inputs, num_outputs]),
             trainable=True,
@@ -314,9 +311,7 @@ if __name__ == "__main__":
     step_size = 0.001
     batch_size = 516
     num_iters = 3000
-    decay_rate = 0.999
     refresh_rate = 10
-    lambda_param = 0.1
     validation_size = 1700
 
     layer_depths = [64,64,128,128,256,256,512,512]
@@ -370,12 +365,12 @@ if __name__ == "__main__":
         if accuracy > 0.6 and not eta_changed:
             adam.eta *= 0.5
             eta_changed = True
-            print("Adam eta changed")
+            print("Learning rate changed")
 
         if accuracy > 0.7 and eta_changed and not second_eta_changed:
             adam.eta *= 0.5
             second_eta_changed = True
-            print("Adam eta changed for the second time")
+            print("Learning rate changed")
     
         grads = tape.gradient(loss, resnet.trainable_variables)
         adam(i + 1, resnet.trainable_variables, grads)
