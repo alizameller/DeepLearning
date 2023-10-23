@@ -52,28 +52,15 @@ class MultiHeadAttention(tf.nn.module):
         return x
 
     def call(self, queries, keys, values, mask=None):
-        # Rearrange the queries to be able to compute all heads in parallel
         q_reshaped = self.reshape_tensor(self.W_q(queries), self.heads, True)
-        # Resulting tensor shape: (batch_size, heads, input_seq_length, -1)
-
-        # Rearrange the keys to be able to compute all heads in parallel
         k_reshaped = self.reshape_tensor(self.W_k(keys), self.heads, True)
-        # Resulting tensor shape: (batch_size, heads, input_seq_length, -1)
-
-        # Rearrange the values to be able to compute all heads in parallel
         v_reshaped = self.reshape_tensor(self.W_v(values), self.heads, True)
-        # Resulting tensor shape: (batch_size, heads, input_seq_length, -1)
-
         # Compute the multi-head attention output using the reshaped queries, keys and values
         o_reshaped = self.attention(q_reshaped, k_reshaped, v_reshaped, self.d_k, mask)
-        # Resulting tensor shape: (batch_size, heads, input_seq_length, -1)
-
         # Rearrange back the output into concatenated form
         output = self.reshape_tensor(o_reshaped, self.heads, False)
-        # Resulting tensor shape: (batch_size, input_seq_length, d_v)
 
         # Apply one final linear projection to the output to generate the multi-head attention
-        # Resulting tensor shape: (batch_size, input_seq_length, d_model)
         return self.W_o(output)
 
 # Implementing the Encoder Layer
@@ -137,7 +124,7 @@ class EncoderLayer(tf.nn.module):
         # Add in a dropout layer
         multihead_output = dropout2d(multihead_output, self.rate, training=training)
         # Followed by an Add & Norm layer
-        addnorm_output = layernorm(x  + multihead_output, self.gamma_1, self.beta_1) 
+        addnorm_output = layernorm(x + multihead_output, self.gamma_1, self.beta_1) 
         # Fully connected layer
         feedforward_output = self.feed_forward(addnorm_output)
         # Add in another dropout layer
@@ -155,8 +142,6 @@ class Encoder(tf.nn.module):
     def call(self, input_sentence, padding_mask, training):
         # Generate the positional encoding
         pos_encoding_output = self.pos_encoding(input_sentence)
-        # Expected output shape = (batch_size, sequence_length, d_model)
-
         # Add in a dropout layer
         x = dropout2d(pos_encoding_output, self.rate, training=training)
 
@@ -178,7 +163,7 @@ if __name__ == "__main__":
     d_model = 512  # Dimensionality of the model sub-layers' outputs
     n = 6  # Number of layers in the encoder stack
     hidden_layer_width = 256
-    num_hidden_layers = 4
+    num_hidden_layers = 2
 
     batch_size = 64  # Batch size from the training process
     dropout_rate = 0.1  # Frequency of dropping the input units in the dropout layers
