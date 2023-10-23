@@ -1,0 +1,2 @@
+I used the tutorial from this website: https://machinelearningmastery.com/implementing-the-transformer-encoder-from-scratch-in-tensorflow-and-keras/ to help guide
+my implementation and also referenced the paper "Attention Is All You Need" as recommended in the assignment description. 
