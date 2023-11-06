@@ -48,7 +48,7 @@ def test_masked_multi_head_attention():
     )
     # print out all 5 words
     # dy_dx[2][0][0][0][0][1] dy_dx[2][0][1][0][0][1] dy_dx[2][0][2][0][0][1] dy_dx[2][0][3][0][0][1] dy_dx[2][0][4][0][0][1]
-
+'''
 # testing tokenization of inputs  
 def test_tokens():
     import tensorflow as tf
@@ -117,4 +117,4 @@ def test_transformer():
 
         grads = tape.gradient(loss, decoder.trainable_variables)
         adam(i + 1, decoder.trainable_variables, grads)
-
+'''

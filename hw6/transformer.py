@@ -59,7 +59,6 @@ class MultiHeadAttention(tf.Module):
         )
 
     def __call__(self, queries, keys, values, mask=None):
-        breakpoint()
         queries = tf.nn.relu(tf.einsum("ntk, kq -> ntq", queries, self.W_q))
         keys = tf.nn.relu(tf.einsum("ntk, kq -> ntq", keys, self.W_k))
         values = tf.nn.relu(tf.einsum("ntk, kq -> ntq", values, self.W_v))
@@ -154,7 +153,6 @@ class Decoder(tf.Module):
         self.dictionary = dictionary
 
     def __call__(self, input_sentence, padding_mask, sequence_length):
-        breakpoint()
         # Generate the tokens and positional encoding
         token_ids = tokenize(input_sentence, sequence_length, self.dictionary)
         embeddings = tf.nn.embedding_lookup(self.embedding_matrix, token_ids)
