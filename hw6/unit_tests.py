@@ -73,48 +73,13 @@ def test_tokens():
     print(embeddings)
 
     tf.debugging.assert_equal(tokens[1], tokens2[2], summarize=2)
-
-def test_transformer():
-    import tensorflow as tf
-    from funcs import tokenize
-
-    rng = tf.random.get_global_generator()
-    rng.reset_from_seed(2384230948)
-
-    vocab_size = 5
-    embedding_size = 512
-
-    embedding_matrix = tf.Variable(
-            rng.normal(shape=[vocab_size, embedding_size]),
-            trainable=True,
-            name="embedding_matrix",
-        )
-    example = ["Man bites dog"]
-    tokens = tokenize(example, 5)
-    example2 = ["Man dog bites"]
-    tokens2 = tokenize(example2, 5)
-    embeddings = tf.nn.embedding_lookup(embedding_matrix, tokens)
-
-    input_seq = random.random((batch_size, input_seq_length))
-    decoder = Decoder(vocab_size, input_seq_length, h, d_k, d_v, d_model, d_ff, n, dropout_rate, hidden_layer_width, num_hidden_layers)
-    print(decoder(input_seq, None, True))
-    adam = Adam(decoder.trainable_variables)
-    rng = tf.random.get_global_generator()
-    rng.reset_from_seed(0x43966E87BD57227011B5B03B58785EC1)
-    bar = trange(num_iters)
-
-    for i in bar:
-        with tf.GradientTape() as tape:
-            label_hat = decoder(input_seq)
-            label_hat = tf.cast(label_hat, dtype=tf.float32)
-            label_batch = tf.cast(input_seq, dtype=tf.int32)
-
-            loss = tf.math.reduce_mean(
-                tf.nn.sparse_softmax_cross_entropy_with_logits(
-                    labels=label_batch, logits=label_hat
-                )
-            )
-
-        grads = tape.gradient(loss, decoder.trainable_variables)
-        adam(i + 1, decoder.trainable_variables, grads)
 '''
+def test_positional_encoding():
+    # visualizing the positional matrix on n = 10000 (value in paper)
+    # set max sequence length = 512
+    import matplotlib.pyplot as plt
+    from transformer import getPositionEncoding
+    P = getPositionEncoding(seq_len=100, d=512, n=10000)
+    cax = plt.matshow(P)
+    plt.gcf().colorbar(cax)
+    plt.savefig('positional_encoding.png')
