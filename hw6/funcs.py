@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 def tokenize(example, max_length_sequence,dictionary):
     #breakpoint()
@@ -53,6 +54,15 @@ def groupnorm(x, gamma, G, beta, eps=1e-5):
     x = tf.reshape(x, [N, H, W, C])
 
     return x * gamma + beta
+
+def getPositionEncoding(seq_len, d, n=10000):
+    P = np.zeros((seq_len, d))
+    for k in range(seq_len):
+        for i in np.arange(int(d/2)):
+            denominator = np.power(n, 2*i/d)
+            P[k, 2*i] = np.sin(k/denominator)
+            P[k, 2*i+1] = np.cos(k/denominator)
+    return P
 
 class Adam:
     def __init__(

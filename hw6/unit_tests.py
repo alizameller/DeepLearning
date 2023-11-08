@@ -4,7 +4,7 @@ import pytest
 # Testing masked multi-head attention Class
 def test_masked_multi_head_attention():
     import tensorflow as tf
-    from transformer import MultiHeadAttention, DotProductAttention
+    from transformer import MultiHeadAttention
     import numpy as np
     from tensorflow import linalg, ones, zeros
 
@@ -32,7 +32,7 @@ def test_masked_multi_head_attention():
        '''
     mask = 1 - linalg.band_part(ones((input_seq_length, input_seq_length)), -1, 0)
 
-    attention = MultiHeadAttention(h, d_k, d_v, d_model, input_seq_length)
+    attention = MultiHeadAttention(h, d_model)
     with tf.GradientTape() as tape:
         tape.watch(input)  # needed for non-Variables
         multihead_output = attention(input[0], input[1], input[2], mask)
@@ -46,7 +46,7 @@ def test_masked_multi_head_attention():
     tf.debugging.assert_equal(
         dy_dx[2][0][0][0][0][1], zeros(shape = dy_dx[2][0][0][0][0][1].shape), summarize=2
     )
-    # print out all 5 words
+    # to print out all 5 words print: 
     # dy_dx[2][0][0][0][0][1] dy_dx[2][0][1][0][0][1] dy_dx[2][0][2][0][0][1] dy_dx[2][0][3][0][0][1] dy_dx[2][0][4][0][0][1]
 '''
 # testing tokenization of inputs  
@@ -74,6 +74,82 @@ def test_tokens():
 
     tf.debugging.assert_equal(tokens[1], tokens2[2], summarize=2)
 '''
+
+def test_transformer():
+    import tensorflow as tf
+    from tqdm import trange
+    from transformer import Decoder, Adam, tokenize
+
+    num_iters = 60
+    batch_size = 64
+    refresh_rate = 10
+    dropout_rate = 0.1 
+    num_hidden_layers = 5
+    hidden_layer_widths = 2
+
+    h = 8  # Number of self-attention heads
+    d_model = 512  # Dimensionality of the model sub-layers' outputs
+    d_ff = 512  # Dimensionality of the inner fully connected layer
+    n = 1  # Number of decoder layers 
+
+    input_sequences = ["SOS My name is david and I love ice cream"]
+    input_seq_length = len(tf.convert_to_tensor(input_sequences).numpy()[0].split())  # Maximum length of the input sequence
+    output_sequences = ["My name is david and I love ice cream <end>"]
+    token_dict = {}
+    token_count = 0
+    
+    for string in (input_sequences + output_sequences):
+        words = string.split()
+        for word in words:
+            if str.encode(word.lower()) not in token_dict.keys():
+                token_dict[str.encode(word.lower())] = token_count
+                token_count = token_count + 1
+    
+    transformer = Decoder(token_count, input_seq_length, h, d_model, d_ff, n, dropout_rate, hidden_layer_widths, num_hidden_layers, token_dict, batch_size)
+    adam = Adam(transformer.trainable_variables)
+    
+    bar = trange(num_iters)
+    rng = tf.random.get_global_generator()
+    rng.reset_from_seed(0x43966E87BD57227011B5B03B58785EA)
+    
+    for i in bar:
+        batch_indices = rng.uniform(
+            shape=[batch_size], maxval=len(input_sequences), dtype=tf.int32
+        )
+        
+        with tf.GradientTape() as tape:
+            input_sequence = tf.gather(input_sequences, batch_indices)
+            output_sequence = tf.gather(output_sequences, batch_indices)
+            output_index = tokenize(output_sequence, input_seq_length, token_dict)
+            output_hat = transformer(input_sequence)
+            loss = tf.math.reduce_mean(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(tf.squeeze(output_index), tf.squeeze(tf.cast(output_hat,tf.float32)))
+            )
+            grads = tape.gradient(loss, transformer.trainable_variables)
+            adam(transformer.trainable_variables, grads, i + 1)
+
+        if i % refresh_rate == (refresh_rate - 1):
+            bar.set_description(
+                f"Step {i}; Loss => {loss.numpy():0.4f}"
+            )
+            bar.refresh()
+
+    test_input = ["SOS my name is david and I"]
+    next = []
+    for i in range(0, input_seq_length + 1 - len(tf.convert_to_tensor(test_input).numpy()[0].split())):
+        prediction = transformer(test_input)
+        prediction = tf.math.argmax(prediction[0],axis=1)
+
+        predicted_words = []
+        for index in prediction:
+            predicted_words.append(list(token_dict.keys())[list(token_dict.values()).index(index)])
+        #print(predicted_words[-1])
+        next.append(predicted_words[-1].decode("utf-8"))
+        test_input = [''.join(test_input + list(' ' + predicted_words[-1].decode("utf-8")))]
+    
+    print(' '.join(next))
+    tf.debugging.assert_equal(' '.join(next), 'love ice cream <end>')
+
 def test_positional_encoding():
     # visualizing the positional matrix on n = 10000 (value in paper)
     # set max sequence length = 512
