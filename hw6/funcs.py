@@ -1,11 +1,12 @@
 import tensorflow as tf
 import numpy as np
 
-def tokenize(example, max_length_sequence,dictionary):
-    #breakpoint()
+
+def tokenize(example, max_length_sequence, dictionary):
+    # breakpoint()
     strings = tf.strings.lower(example)
     split_strings = tf.strings.split(strings, " ")
-    #dict = {b'sos':0,b'man':1,b'bites':2,b'dog':3,b'<end>':4}
+    # dict = {b'sos':0,b'man':1,b'bites':2,b'dog':3,b'<end>':4}
     token_ids = []
     for sentence in split_strings:
         temp_ids = []
@@ -15,21 +16,14 @@ def tokenize(example, max_length_sequence,dictionary):
     truncated_token_ids = token_ids[:max_length_sequence]
     return truncated_token_ids
 
-def getPositionEncoding(seq_len, d, n=10000):
-    P = tf.zeros((seq_len, d))
-    for k in range(seq_len):
-        for i in tf.arange(int(d/2)):
-            denominator = tf.power(n, 2*i/d)
-            P[k, 2*i] = tf.sin(k/denominator)
-            P[k, 2*i+1] = tf.cos(k/denominator)
-    return P
 
 def dropout2d(x, rate=0.1, seed=4567897):
     return tf.nn.dropout(x, rate, seed=seed)
 
+
 def layernorm(x, gamma, beta, eps=1e-5):
-    # features of x are N = batch size, H = height, W = width, and C = channels. 
-    x = tf.expand_dims(x,axis=0)
+    # features of x are N = batch size, H = height, W = width, and C = channels.
+    x = tf.expand_dims(x, axis=0)
     # x: input features with shape [N,H,W,C]
     # gamma, beta: scale and offset, with shape [1,C,1,1]
     # G: number of groups for GN
@@ -40,35 +34,35 @@ def layernorm(x, gamma, beta, eps=1e-5):
     x = tf.reshape(x, [N, H, W, C])
     x = x * gamma + beta
 
-    return tf.squeeze(x, axis = 0)
+    return tf.squeeze(x, axis=0)
 
-def groupnorm(x, gamma, G, beta, eps=1e-5):
-    # x: input features with shape [N,C,H,W]
-    # gamma, beta: learnable scale and offset, with shape [1,C,1,1] # G: number of groups for GN
-    N, H, W, C = x.shape
-    # breakpoint()
-    x = tf.reshape(x, [N, G, C // G, H, W])
 
-    mean, var = tf.nn.moments(x, [2, 3, 4], keepdims=True)
-    x = (x - mean) / tf.sqrt(var + eps)
-    x = tf.reshape(x, [N, H, W, C])
-
-    return x * gamma + beta
-
-def getPositionEncoding(seq_len, d, n=10000):
+def positional_encoding(seq_len, d, n=10000):
     P = np.zeros((seq_len, d))
     for k in range(seq_len):
-        for i in np.arange(int(d/2)):
-            denominator = np.power(n, 2*i/d)
-            P[k, 2*i] = np.sin(k/denominator)
-            P[k, 2*i+1] = np.cos(k/denominator)
+        for i in np.arange(int(d / 2)):
+            denominator = np.power(n, 2 * i / d)
+            P[k, 2 * i] = np.sin(k / denominator)
+            P[k, 2 * i + 1] = np.cos(k / denominator)
     return P
+
 
 class Adam:
     def __init__(
-        self, variables, eta=0.001, alpha=0.001, beta_1=0.9, beta_2=0.999, eps=1e-8):
-        self.m_list = [tf.zeros(tf.shape(variable).numpy()) for variable in variables]
-        self.v_list = [tf.zeros(tf.shape(variable).numpy()) for variable in variables]
+        self,
+        variables,
+        eta=0.001,
+        alpha=0.001,
+        beta_1=0.9,
+        beta_2=0.999,
+        eps=1e-8,
+    ):
+        self.m_list = [
+            tf.zeros(tf.shape(variable).numpy()) for variable in variables
+        ]
+        self.v_list = [
+            tf.zeros(tf.shape(variable).numpy()) for variable in variables
+        ]
         self.alpha = alpha
         self.beta_1 = beta_1
         self.beta_2 = beta_2
