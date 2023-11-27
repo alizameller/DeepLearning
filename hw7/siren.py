@@ -8,10 +8,8 @@ sys.path.insert(0, "../hw3")
 from cnn import Adam
 
 class Linear(tf.Module):
-    def __init__(self, num_inputs, num_outputs, bias=True):
+    def __init__(self, num_inputs, num_outputs, bias=True, is_first=False):
         rng = tf.random.get_global_generator()
-
-        stddev = tf.math.sqrt(2 / (num_inputs + num_outputs))
 
         self.w = tf.Variable(
             rng.uniform(shape=[num_inputs, num_outputs], 
@@ -30,12 +28,17 @@ class Linear(tf.Module):
                 trainable=True,
                 name="Linear/b",
             )
+        
+        self.is_first = is_first
 
     def __call__(self, x):
         z = x @ self.w
 
         if self.bias:
             z += self.b
+        
+        if self.is_first:
+            z *= 30
 
         return z
 
@@ -53,8 +56,9 @@ class Siren(Linear, tf.Module):
         self.K = num_hidden_layers
         self.hidden_activation = hidden_activation
         self.output_activation = output_activation
-        self.input_linear = Linear(num_inputs, self.M)
-        self.hidden_linear = [Linear(self.M, self.M) for i in range(self.K)]
+        self.input_linear = Linear(num_inputs, self.M, is_first = True)
+        self.hidden_linear = [Linear(self.M, self.M) for i in range(self.K - 1)]
+        self.hidden_linear.append(Linear(self.M, self.M))
         self.output_linear = Linear(self.M, num_outputs)
 
     def __call__(self, x):
@@ -64,8 +68,7 @@ class Siren(Linear, tf.Module):
             p = self.hidden_linear[i](p)
 
         p = self.output_linear(p)
-        # return self.output_activation(p)
-        return tf.nn.sigmoid(p)
+        return self.output_activation(p)
 
 if __name__ == "__main__":
     import argparse
@@ -76,14 +79,14 @@ if __name__ == "__main__":
     import cv2
 
     hidden_layer_width = 256
-    num_hidden_layers = 4
+    num_hidden_layers = 8
     num_inputs = 2
     num_outputs = 3
     num_samples = 500
 
     step_size = 0.5
     batch_size = 128
-    num_iters = 1000
+    num_iters = 250
     decay_rate = 0.999
     refresh_rate = 10
 
@@ -96,7 +99,7 @@ if __name__ == "__main__":
         output_activation=tf.math.sin,
     )
 
-    img = cv2.resize(cv2.imread('Testcard_f.jpg'), (180, 180))/255
+    img = cv2.resize(cv2.imread('TestcardF.jpeg'), (180, 180))/255
     print(img.shape)
     # breakpoint()
 
@@ -110,7 +113,7 @@ if __name__ == "__main__":
     pixel_coordinates = tf.concat((x.reshape(-1, 1), y.reshape(-1, 1)), 1)
  
     # Ground Truth
-    fig, axes = plt.subplots(1, 2, figsize=(15, 3))
+    fig, axes = plt.subplots(1, 3, figsize=(6, 3))
     axes[0].imshow(img, cmap='gray')
     axes[0].set_title('Ground Truth', fontsize=13)
     #plt.show()
@@ -139,9 +142,18 @@ if __name__ == "__main__":
             bar.refresh()
             axes[1].imshow(model_output.numpy().reshape(180, 180, 3), cmap='gray')
 
-    for i in range(2):
+    axes[1].set_title('Trained Image', fontsize=13)
+
+    x_test, y_test = np.meshgrid(np.linspace(-1, 1, 90), np.linspace(-1, 1, 90))
+    pixel_coordinates_test = tf.concat((x.reshape(-1, 1), y.reshape(-1, 1)), 1)
+    test = siren(tf.cast(pixel_coordinates_test, dtype=tf.float32))
+    breakpoint()
+    axes[2].imshow(test.numpy().reshape(180, 180, 3), cmap='gray')
+    axes[2].set_title('Interesting', fontsize=13)
+
+    for i in range(3):
         axes[i].set_xticks([])
         axes[i].set_yticks([])
-    plt.show()
+    # plt.show()
     plt.savefig("fig.png")
     plt.close() 
